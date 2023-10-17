@@ -6,6 +6,15 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GST REQUIRED gstreamer-1.0)
 pkg_check_modules(GST_RTSP_SERVER REQUIRED gstreamer-rtsp-server-1.0)
 
+
+option(ENABLE_VA_API_CODECS "Enable feature X" ON)
+
+if (ENABLE_VA_API_CODECS)
+    pkg_search_module(GST REQUIRED gstreamer1.0-vaapi)
+    add_definitions(-DVA_API_CODECS)
+endif()
+
+
 # Set the source files
 set(SOURCE test-rtsp-video-server.cpp)
 

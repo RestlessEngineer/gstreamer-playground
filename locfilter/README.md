@@ -40,9 +40,18 @@ Launch GStreamer from the build directory
 ```
 gst-launch-1.0 filesrc location=../Videos/birds.mp4 ! decodebin ! videoconvert ! locfilter show-boxes=true  ! videoconvert ! autovideosink
 ```
+or
+```
+st-launch-1.0 filesrc location=../Videos/birds.mp4 ! qtdemux ! h264parse ! avdec_h264 ! videoconvert ! locfilter show-boxes=true  ! videoconvert ! autovideosink
+```
 
 This pipeline loads a video file (birds.mp4), decodes it, applies the locfilter with the show-boxes parameter set to true, and displays the result on the screen.
 
+To save the processed video into an MP4 file, you can use the following GStreamer pipeline:
+```
+gst-launch-1.0 filesrc location=../Videos/birds.mp4 ! qtdemux ! h264parse ! avdec_h264 ! videoconvert ! locfilter show-boxes=true ! videoconvert ! x264enc ! mp4mux ! filesink location=output.mp4
+```
+Example or this result exists in **docs** directory of the project
 
 ## Options
 

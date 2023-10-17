@@ -92,17 +92,25 @@ main (int argc, char *argv[])
   GMainLoop *loop;
   GstRTSPServer *server;
   GstRTSPMountPoints *mounts;
-  GstRTSPMediaFactory *factory_snow, *factory_ball, *factory_media_file;
+  GstRTSPMediaFactory *factory;
   GstElement *pipeline;
 
   gst_init (&argc, &argv);
 
-  std::string pipe = " rtspsrc location=rtsp://admin:Admin12345@reg.fuzzun.ru:50232/ISAPI/Streaming/Channels/101 latency=200 ! decodebin ! x264enc ! queue !"
+#ifdef VA_API_CODECS
+  std::string pipe = " rtspsrc location=rtsp://admin:Admin12345@reg.fuzzun.ru:50232/ISAPI/Streaming/Channels/101 ! decodebin ! vaapih264enc !"
     " input-selector name=selector !" 
     " rtph264pay name=pay0 pt=96 "
-    " multifilesrc location=$ loop=true ! decodebin ! x264enc ! queue !"
+    " multifilesrc location=$ loop=true ! decodebin ! vaapih264enc !"
     " selector.";
-    
+#else
+    std::string pipe = " rtspsrc location=rtsp://admin:Admin12345@reg.fuzzun.ru:50232/ISAPI/Streaming/Channels/101 ! decodebin ! x264enc !"
+    " input-selector name=selector !" 
+    " rtph264pay name=pay0 pt=96 "
+    " multifilesrc location=$ loop=true ! decodebin ! x264enc !"
+    " selector.";
+#endif
+
     auto pos = pipe.find("$");
     pipe.erase(pos, 1);
 
@@ -110,13 +118,6 @@ main (int argc, char *argv[])
 
     g_print("pipeline: %s\n", pipe.c_str());
     pipeline = gst_parse_launch( pipe.c_str(), NULL);
-
-    // pipeline = gst_parse_launch(
-    //  " rtspsrc location=rtsp://admin:Admin12345@reg.fuzzun.ru:50232/ISAPI/Streaming/Channels/101 latency=200 ! decodebin ! x264enc bitrate=8000 ! queue !"
-    //  " input-selector name=selector !" 
-    //  " rtph264pay name=pay0 pt=96 "
-    //  " multifilesrc location=/home/vladislav/Videos/bunny_short_original.avi loop=true ! decodebin ! x264enc bitrate=8000 ! queue !"
-    //  " selector.", NULL);
 
     if (!pipeline) {
         g_print("Failed to create the pipeline.\n");
@@ -134,10 +135,11 @@ main (int argc, char *argv[])
 
   mounts = gst_rtsp_server_get_mount_points (server);
 
-  factory_snow = custom_pipeline_factory(pipeline);
+  factory = custom_pipeline_factory(pipeline);
+   
+  g_signal_connect(factory, "media-configure", G_CALLBACK(on_media_configure), NULL);
 
-
-  gst_rtsp_mount_points_add_factory (mounts, "/test", factory_snow);
+  gst_rtsp_mount_points_add_factory (mounts, "/test", factory);
 
   g_object_unref (mounts);
 
@@ -147,9 +149,7 @@ main (int argc, char *argv[])
 
   /* add a timeout for the session cleanup */
   g_timeout_add_seconds (2, (GSourceFunc) timeout, server);
-    
-  g_signal_connect(factory_snow, "media-configure", G_CALLBACK(on_media_configure), NULL);
-  
+ 
   g_print ("stream ready at rtsp://%s:8554/test\n", address.c_str());
   g_main_loop_run (loop);
 
